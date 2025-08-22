@@ -146,7 +146,7 @@ class airtable_helper:
         return None
 
     def get_first_row(self, column, value):
-        return self.table.first(formula=match({column: value}))        
+        return self.sheet.first(formula=match({column: value}))        
 
     # attach file to row
     def attachment_to_row(self,row_id, file_data, name):
