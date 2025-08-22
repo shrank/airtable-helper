@@ -23,6 +23,7 @@ class airtable_helper:
         self.last_timestamp = None
         self.updateRows={}
         self.model = None
+        self.typecast = True
         self.smartsheet_mode=smartsheet_mode
 
     # load table model
@@ -108,7 +109,7 @@ class airtable_helper:
             rows=[]
             for a in self.updateRows:
                 rows.append(self.updateRows[a])
-            res = self.sheet.batch_update( rows)
+            res = self.sheet.batch_update(rows, typecast=self.typecast)
             self.updateRows={}
             return res
 
@@ -122,7 +123,7 @@ class airtable_helper:
     
     # insert rows
     def insert_bulk(self, rows):
-        return self.sheet.batch_create(rows)
+        return self.sheet.batch_create(rows, typecast=self.typecast)
 
     # get value from cell
     def getValue(self, row, key, default=None):
