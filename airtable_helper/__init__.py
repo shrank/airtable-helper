@@ -150,10 +150,9 @@ class airtable_helper:
         return self.sheet.first(formula=match({column: value}))        
 
     # attach file to row
-    def attachment_to_row(self,row_id, file_data, name):
-        raise Exception("not implemented: %s()" % inspect.currentframe().f_code.co_nam)
-        return self.smart.Attachments.attach_file_to_row(self.sheet, row_id, (name, file_data))
-    
+    def attachment_to_row(self,row_id, column, file_data, name):
+        return self.sheet.upload_attachment(row_id, column, content=file_data, filename=name)
+          
     # attach comment to row
     def comments_to_row(self, row, comments):
         raise Exception("not implemented: %s()" % inspect.currentframe().f_code.co_nam)
