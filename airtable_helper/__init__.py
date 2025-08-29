@@ -29,6 +29,11 @@ class airtable_helper:
     # load table model
     def loadModel(self):
         self.model = self.sheet.schema()
+        self.columns = {}
+        for a in self.model.fields:
+            self.columns[a.name] = a.name
+            
+
 
     # load all column headers
     def loadColumns(self):
