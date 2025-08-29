@@ -37,7 +37,7 @@ class airtable_helper:
 
     # load all column headers
     def loadColumns(self):
-        self._loadColumns()
+        self.loadModel()
 
     def _loadColumns(self):
         self.columns = {}
@@ -53,7 +53,6 @@ class airtable_helper:
     def get_copy(self):
         data = copy.copy(self)
         data.data = None
-        data.columns = {}
         data.last_timestamp = None
         data.updateRows={}
         return data
@@ -64,7 +63,8 @@ class airtable_helper:
             self.data = self.sheet.all(formula=formula)
         else:
             self.data = self.sheet.all(fields = columns, formula=formula)
-        self._loadColumns()
+        if(len(self.columns) == 0):
+            self._loadColumns()
         self.last_timestamp = datetime.now(UTC).isoformat()
         print(self.last_timestamp)
         return self.data
