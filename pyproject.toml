@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "airtable_helper"
-version = "0.0.6"
+version = "0.0.7"
 authors = [
     { name="shrank", email="info@murxs.ch" },
 ]
