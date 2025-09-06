@@ -2,6 +2,8 @@
 import inspect
 import os
 import copy
+import threading
+import time
 from pyairtable import Api
 from pyairtable.formulas import match, GTE, LAST_MODIFIED_TIME
 from datetime import datetime, UTC
@@ -17,6 +19,8 @@ class airtable_helper:
             sheet_id = os.getenv("AIRTABLE_SHEET_ID")
         if(base_id is None):
             base_id = os.getenv("AIRTABLE_BASE_ID")
+        self.base_id = base_id
+        self.sheet_id = sheet_id
         self.sheet = self.api.table(base_id, sheet_id)
         self.data = {}
         self.columns = {}
@@ -25,6 +29,8 @@ class airtable_helper:
         self.model = None
         self.typecast = True
         self.smartsheet_mode=smartsheet_mode
+        self.wh = {}
+        self.autorefresh = None
 
     # load table model
     def loadModel(self):
@@ -185,41 +191,62 @@ class airtable_helper:
 
     # get all webhooks
     def get_webhooks(self):
-        raise Exception("not implemented: %s()" % inspect.currentframe().f_code.co_nam)
-        return self.smart.Webhooks.list_webhooks().data
+        return self.api.base(self.base_id).webhooks()
 
     # create new webhook
-    def create_webhook(self,name, url, columns=None, enabled=True):
-        raise Exception("not implemented: %s()" % inspect.currentframe().f_code.co_nam)
-        item = smartsheet.models.webhook.Webhook()
-        item.callback_url = url
-        item.name = name
-        item.events =  '*.*'
-        item.scope = "sheet"
-        item.version = 1
-        item.scope_object_id = int(self.sheet)
-        if(columns is not None):
-            if(len(self.columns) == 0):
-                self.loadColumns()
-            subscope=[]
-            for a in columns:
-                if(a in self.columns):
-                    subscope.append(self.columns[a])
-            item.subscope = smartsheet.models.webhook_subscope.WebhookSubscope(props={"column_ids":subscope})
-        res = self.smart.Webhooks.create_webhook(item).data
-        if(res.enabled != enabled):
-            self.smart.Webhooks.update_webhook(res.id_, smartsheet.models.webhook.Webhook(props={"enabled": enabled}))
+    def create_webhook(self,name, url, columns=None, enabled=True, sources=["client", "formSubmission", "formPageSubmission", "automation" ], dataTypes=["tableData"]):
+        options = {"options": {
+            "filters": {
+                "dataTypes": dataTypes,
+                "recordChangeScope": self.sheet_id,
+                "fromSources": sources
+                }
+            }
+        }
+        if(columns != None):
+            options["options"]["filters"]["watchDataInFieldIds"] = columns
+        res = self.api.base(self.base_id).add_webhook(url,options)
+        self.wh[name] = res
+        return res
 
+ 
     # delete existing webhook
     def delete_webhook(self, name):
-        raise Exception("not implemented: %s()" % inspect.currentframe().f_code.co_nam)
+        if(name in self.wh):
+            return self.wh[name].delete()
+        return None
+
+    def delete_by_url(self, url):
         for a in self.get_webhooks():
-            if(a.name == name):
-                self.smart.Webhooks.delete_webhook(a.id_)
-                
+            if(a.notification_url == url):
+                a.delete()
+
+    def autorefresh_webhooks(self):
+      if(self.autorefresh is not None):
+        return
+      self.autorefresh =  webhook_refresh_thread()
+      self.autorefresh.data = self
+      self.autorefresh.start()
+
+
+
+
+class webhook_refresh_thread(threading.Thread):
+  def run(self):
+      while True:
+          time.sleep(24*60*60)  # sleep 1 day
+          print("refresh webhooks")
+          for a in self.data.wh.values():
+            try:
+              self.data.sheet.api.post(f"https://api.airtable.com/v0/bases/{self.data.base_id}/webhooks/{a.id}/refresh")
+            except Exception as e:
+              print(e)
+      
+
 if __name__ == '__main__':
     import dotenv
     dotenv.load_dotenv()
     a = airtable_helper()
-    a.insert({"AP ID":"TEST1", "Tags": ["jj","AA"]})
-    
+    print(a.getUpdated(formula=match({"FLAG": True})))
+    time.sleep(20)
+    print(a.getUpdated(formula=match({"FLAG": True})))
