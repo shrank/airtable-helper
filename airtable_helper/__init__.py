@@ -5,7 +5,7 @@ import copy
 import threading
 import time
 from pyairtable import Api
-from pyairtable.formulas import match, GTE, LAST_MODIFIED_TIME
+from pyairtable.formulas import match, GTE, LAST_MODIFIED_TIME, AND
 from datetime import datetime, UTC
 
 # create multivalue dropdown field object
@@ -76,11 +76,13 @@ class airtable_helper:
         return self.data
 
     # get all rows changed since we last got any rows
-    def getUpdated(self, columns=None):
+    def getUpdated(self, columns=None, formula=None):
         if(self.last_timestamp is None):
-            return self.getAll(columns)
-        formula = GTE(LAST_MODIFIED_TIME(), self.last_timestamp)
-        return self.getAll(columns=columns, formula=formula)
+            return self.getAll(columns, formula)
+        modified = GTE(LAST_MODIFIED_TIME(), self.last_timestamp)
+        if(formula is not None):
+            modified = AND(formula, modified)
+        return self.getAll(columns=columns, formula=modified)
 
     # convert dict to row object
     def dict2row(self,values, row=None, diff=False, skip_nonexistend=None):
