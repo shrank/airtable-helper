@@ -4,13 +4,15 @@ import os
 import copy
 import threading
 import time
+import sys
 from pyairtable import Api
 from pyairtable.formulas import match, GTE, LAST_MODIFIED_TIME, AND
 from datetime import datetime, UTC
 
 # create multivalue dropdown field object
 def create_multivalue(values):
-    raise Exception("not implemented: %s()" % inspect.currentframe().f_code.co_nam)
+    print("airtable_helper.create_multivalue() is obsolete\n")
+    return values
 
 class airtable_helper:
     def __init__(self, smartsheet_mode=False, sheet_id=None, base_id=None):
