@@ -207,8 +207,16 @@ class airtable_helper:
                 }
             }
         }
-        if(columns != None):
-            options["options"]["filters"]["watchDataInFieldIds"] = columns
+        if(columns is not None):
+            if(self.model is None):
+                self.loadModel()
+            column_ids = []
+            for b in columns:
+              for a in self.model.fields:
+                  if(a.name == b):
+                      column_ids.append(a.id)
+
+            options["options"]["filters"]["watchDataInFieldIds"] = column_ids
         res = self.api.base(self.base_id).add_webhook(url,options)
         self.wh[name] = res
         return res
