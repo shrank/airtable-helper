@@ -21,6 +21,11 @@ class airtable_helper:
             sheet_id = os.getenv("AIRTABLE_SHEET_ID")
         if(base_id is None):
             base_id = os.getenv("AIRTABLE_BASE_ID")
+        self.view_id = None
+        if("/" in sheet_id):
+            a = sheet_id.split("/")
+            sheet_id = a[0]
+            self.view_id = a[1]
         self.base_id = base_id
         self.sheet_id = sheet_id
         self.sheet = self.api.table(base_id, sheet_id)
@@ -68,9 +73,9 @@ class airtable_helper:
     # get all rows from sheet
     def getAll(self, columns=None, formula=None):
         if(columns is None):
-            self.data = self.sheet.all(formula=formula)
+            self.data = self.sheet.all(formula=formula, view=self.view_id)
         else:
-            self.data = self.sheet.all(fields = columns, formula=formula)
+            self.data = self.sheet.all(fields = columns, formula=formula, view=self.view_id)
         if(len(self.columns) == 0):
             self._loadColumns()
         self.last_timestamp = datetime.now(UTC).isoformat()
@@ -162,7 +167,7 @@ class airtable_helper:
         return None
 
     def get_first_row(self, column, value):
-        return self.sheet.first(formula=match({column: value}))        
+        return self.sheet.first(formula=match({column: value}), view=self.view_id)        
 
     # attach file to row
     def attachment_to_row(self,row_id, column, file_data, name):
@@ -207,6 +212,8 @@ class airtable_helper:
                 }
             }
         }
+        if(self.view_id is not None):
+            options["options"]["filters"]["recordChangeScope"] = self.view_id
         if(columns is not None):
             if(self.model is None):
                 self.loadModel()
