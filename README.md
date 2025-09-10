@@ -9,6 +9,20 @@ AIRTABLE_SHEET_ID=your_sheet_id
 AIRTABLE_BASE_ID=your_base_id
 ``` 
 
+turn on debug on stderr
+`AIRTABLE_DEBUG=True`
+
+turm on statics reporting use
+```
+AIRTABLE_STATS_URL=https://your.stats.server
+
+# optional ID
+AIRTABLE_STATS_ID=appID
+
+#optional headers
+AIRTABLE_STATS_HEADER=Authorization: asfdkjlkjdlfa
+```
+
 ## caveats
 
 - airtables doesn't return empty cells in row results

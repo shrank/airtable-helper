@@ -5,9 +5,10 @@ import copy
 import threading
 import time
 import sys
+import requests
 from pyairtable import Api
 from pyairtable.formulas import match, GTE, LAST_MODIFIED_TIME, AND
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 
 # create multivalue dropdown field object
 def create_multivalue(values):
@@ -15,12 +16,39 @@ def create_multivalue(values):
     return values
 
 class airtable_helper:
-    def __init__(self, smartsheet_mode=False, sheet_id=None, base_id=None):
+    def __init__(self, smartsheet_mode=False, sheet_id=None, base_id=None, enable_debug=False):
         self.api = Api(os.environ['AIRTABLE_API_KEY'])
         if(sheet_id is None):
             sheet_id = os.getenv("AIRTABLE_SHEET_ID")
         if(base_id is None):
             base_id = os.getenv("AIRTABLE_BASE_ID")
+            
+        stats_url = os.getenv("AIRTABLE_STATS_URL","")
+        if(stats_url != ""):
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            self.stats = {
+                "url": stats_url,
+                "headers": None
+            }
+            stats_id = os.getenv("AIRTABLE_STATS_ID","")
+            stats_header = os.getenv("AIRTABLE_STATS_HEADER","")
+            if(stats_id != ""):
+                self.stats["id"] = stats_id
+            else:
+                import uuid
+                self.stats["id"] = str(uuid.uuid4())
+                print("set dynamic statistics ID: %s" % self.stats["id"], file=sys.stderr)
+            if(stats_header != ""):
+                parts = stats_header.split(":")
+                self.stats["headers"]={parts[0]: ":".join(parts[1:]).strip()}
+            self.api.session.hooks['response'].append(self._api_stats)
+
+        if(enable_debug is False):
+            enable_debug = os.getenv("AIRTABLE_DEBUG","") == "True" 
+        if(enable_debug):
+            self.api.session.hooks['response'].append(self._api_debug)
+
         self.view_id = None
         if("/" in sheet_id):
             a = sheet_id.split("/")
@@ -247,7 +275,29 @@ class airtable_helper:
       self.autorefresh.data = self
       self.autorefresh.start()
 
+    def _api_debug(self, resp, *args, **kwargs):
+      time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+      duration = resp.elapsed / timedelta(milliseconds=1)
 
+      print("%s: %s %s [%d] duration: %d ms" % (time_str,resp.request.method, resp.url, resp.status_code, duration), file=sys.stderr)
+
+    def _api_stats(self, resp, *args, **kwargs):
+      data = {
+          "event": "airtable request",
+          "sourcetype": "airtable",
+          "fields": {
+              "source": self.stats["id"],
+              "url": resp.url,
+              "method": resp.request.method,
+              "status_code": resp.status_code,
+              "elapsed": resp.elapsed / timedelta(milliseconds=1)
+            }
+        }
+
+      try:
+          requests.post(self.stats["url"], headers=self.stats["headers"], json=data, timeout=0.5, verify=False)
+      except Exception as e:
+          print(e, file=sys.stderr)
 
 
 class webhook_refresh_thread(threading.Thread):
@@ -266,6 +316,6 @@ if __name__ == '__main__':
     import dotenv
     dotenv.load_dotenv()
     a = airtable_helper()
-    print(a.getUpdated(formula=match({"FLAG": True})))
+    a.getUpdated(formula=match({"FLAG": True}))
     time.sleep(20)
-    print(a.getUpdated(formula=match({"FLAG": True})))
+#    print(a.getUpdated(formula=match({"FLAG": True})))
