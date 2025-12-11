@@ -256,8 +256,7 @@ class airtable_helper:
                 }
             }
         }
-        if(self.view_id is not None):
-            options["options"]["filters"]["recordChangeScope"] = self.view_id
+
         if(columns is not None):
             if(self.model is None):
                 self.loadModel()
