@@ -232,10 +232,26 @@ class airtable_helper:
 
     # create new webhook
     def create_webhook(self,name, url, columns=None, enabled=True, sources=["client", "formSubmission", "formPageSubmission", "automation" ], dataTypes=["tableData"]):
+        scope = None
+        if(self.view_id is not None):
+            if(self.view_id.startswith("viw")):
+                scope = self.view_id
+            else:
+                self.loadModel()
+                for a in self.model.views:
+                    if(a.name == self.view_id):
+                        scope = a.id
+                        break
+        else:
+            scope = self.sheet_id
+            if(scope.startswith("tbl") is False):
+                self.loadModel()
+                scope = self.model.id
+            
         options = {"options": {
             "filters": {
                 "dataTypes": dataTypes,
-                "recordChangeScope": self.sheet_id,
+                "recordChangeScope": scope,
                 "fromSources": sources
                 }
             }
