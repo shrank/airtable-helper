@@ -107,7 +107,6 @@ class airtable_helper:
         if(len(self.columns) == 0):
             self._loadColumns()
         self.last_timestamp = datetime.now(UTC).isoformat()
-        print(self.last_timestamp)
         return self.data
 
     # get all rows changed since we last got any rows
