@@ -277,6 +277,46 @@ class airtable_helper:
             return self.wh[name].delete()
         return None
 
+    # add options to a select or multi-select field
+    # This workaround adds a row with the new option, then deletes it to register the option
+    # NOTE: This requires the table to have no required fields, or all required fields must have default values
+    def add_field_options(self, column, options):
+        if(self.model is None):
+            self.loadModel()
+        
+        field_obj = None
+        for a in self.model.fields:
+            if(a.name == column):
+                field_obj = a
+                break
+        if(field_obj is None):
+            raise Exception(f"Field '{column}' not found")
+        
+        if(isinstance(options, str)):
+            options = [options]
+        
+        current_choices = {}
+        if(field_obj.options and hasattr(field_obj.options, 'choices')):
+            for c in field_obj.options.choices:
+                current_choices[c.name] = c.id
+        
+        new_options = [opt for opt in options if opt not in current_choices]
+        if not new_options:
+            return None
+        
+  
+        # For each new option, add a row with that option and then delete it
+        # This registers the option in the field's choices
+        for opt in new_options:
+            try:
+                row = self.insert({column: opt})
+                self.sheet.delete(row[0]['id'])
+            except Exception as e:
+                print(f"Warning: Could not add option '{opt}': {e}")
+                continue
+        
+        return new_options
+
     def delete_by_url(self, url):
         for a in self.get_webhooks():
             if(a.notification_url == url):
